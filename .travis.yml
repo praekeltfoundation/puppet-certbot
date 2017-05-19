@@ -1,0 +1,15 @@
+language: ruby
+rvm:
+  - 2.1.9
+cache:
+  - bundler
+  - directories:
+    - $HOME/librarian-puppet
+env:
+  - LIBRARIAN_PUPPET_TMP="$HOME/librarian-puppet"
+
+before_install:
+  - gem update bundler
+
+script:
+  - bundle exec rake test
