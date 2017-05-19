@@ -8,4 +8,7 @@ group :test do
   gem 'librarian-puppet'
   gem 'metadata-json-lint'
   gem 'puppetlabs_spec_helper'
+  gem 'rspec-puppet-facts'
+
+  gem 'rubocop', '~> 0.48.1', :require => false
 end
