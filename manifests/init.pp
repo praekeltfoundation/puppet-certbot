@@ -6,6 +6,9 @@
 #
 # == Parameters:
 #
+# [*email*]
+#   The email address to register with the ACME authority.
+#
 # [*pip_ensure*]
 #   The ensure value for the Python::Pip resource. The version can be set here.
 #
@@ -27,9 +30,6 @@
 # [*log_dir*]
 #   The directory to store certbot log files.
 #
-# [*email*]
-#   The email address to register with the ACME authority.
-#
 # [*config*]
 #   Any extra configuration to set in certbot's configuration file. Will
 #   override *default_config*.
@@ -37,6 +37,8 @@
 # [*default_config*]
 #   The base config settings.
 class certbot (
+  String  $email,
+
   String  $pip_ensure         = 'present',
   Boolean $install_build_deps = true,
 
@@ -46,7 +48,6 @@ class certbot (
   String  $config_dir         = '/etc/letsencrypt',
   String  $log_dir            = '/var/log/letsencrypt',
 
-  String  $email,
   Hash[String, String]
           $config             = {},
   Hash[String, String]
@@ -77,8 +78,8 @@ class certbot (
 
   file {
     default:
-      owner  => 'certbot',
-      group  => 'certbot';
+      owner => 'certbot',
+      group => 'certbot';
 
     $install_dir:
       ensure => directory,
