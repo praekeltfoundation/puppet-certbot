@@ -62,7 +62,8 @@ define certbot::nginx_virtual_server (
   Optional[Array[String, 1]]
           $domains          = undef,
   Hash    $location_params  = {},
-  Boolean $enable_certs     = false,
+  Optional[Boolean]
+          $enable_certs     = undef,
   Boolean $enable_redirect  = true,
   Boolean $enable_stapling  = true,
   Boolean $manage_cron      = true,
@@ -101,7 +102,15 @@ define certbot::nginx_virtual_server (
   $_first_domain = $_domains[0]
   $_live_path = "${certbot::config_dir}/live/${_first_domain}"
 
-  if $enable_certs {
+  if $enable_certs == undef {
+    # If the certificate files exist (we can glob them), then enable the
+    # certificates
+    $_enable_certs = length(glob("${_live_path}/{fullchain,privkey}.pem")) == 2
+  } else {
+    $_enable_certs = $enable_certs
+  }
+
+  if $_enable_certs {
     $_cert_params = {
       ssl      => true,
       ssl_cert => "${_live_path}/fullchain.pem",
