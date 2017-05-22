@@ -62,7 +62,8 @@ define certbot::nginx_virtual_server (
   Optional[Array[String, 1]]
           $domains          = undef,
   Hash    $location_params  = {},
-  Boolean $enable_certs     = false,
+  Optional[Boolean]
+          $enable_certs     = false,
   Boolean $enable_redirect  = true,
   Boolean $enable_stapling  = true,
   Boolean $manage_cron      = true,
@@ -101,7 +102,23 @@ define certbot::nginx_virtual_server (
   $_first_domain = $_domains[0]
   $_live_path = "${certbot::config_dir}/live/${_first_domain}"
 
-  if $enable_certs {
+  if $enable_certs == undef {
+    if $certbot::config_dir == '/etc/letsencrypt' {
+      $_enable_certs = member($::certbot_live_certs, $_first_domain)
+    } else {
+      $_warning = @("END"/L)
+Certificate presence can only be detected with the default config directory,
+\$certbot::config_dir='/etc/letsencrypt', not '${certbot::config_dir}'. You must
+adjust the \$enable_certs parameter manually to enable use of the certificates.
+| END
+      warning($_warning)
+      $_enable_certs = false
+    }
+  } else {
+    $_enable_certs = $enable_certs
+  }
+
+  if $_enable_certs {
     $_cert_params = {
       ssl      => true,
       ssl_cert => "${_live_path}/fullchain.pem",
