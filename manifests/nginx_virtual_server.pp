@@ -85,9 +85,7 @@ define certbot::nginx_virtual_server (
     $_domains = $domains
   } else {
     $_domains = getparam(Nginx::Resource::Server[$server], 'server_name')
-    # stdlib >= 4.13.0 getparam() returns false if it can't find the param.
-    # Earlier versions return an empty string.
-    if ! $_domains or $_domains == '' {
+    if ! $_domains {
       fail("Unable to find Nginx server resource '${server}' and no domains specified.")
     }
   }
