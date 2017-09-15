@@ -2,7 +2,7 @@
   "name": "praekeltfoundation-certbot",
   "version": "0.1.1-dev",
   "author": "Jamie Hewland",
-  "summary": "Simplifies management of iptables rules when running Docker",
+  "summary": "Install Certbot, the refernce Let's Encrypt client from the EFF",
   "license": "BSD-3-Clause",
   "source": "http://github.com/praekeltfoundation/puppet-certbot",
   "project_page": "https://github.com/praekeltfoundation/puppet-certbot",
