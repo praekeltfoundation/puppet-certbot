@@ -12,10 +12,6 @@
 # [*pip_ensure*]
 #   The ensure value for the Python::Pip resource. The version can be set here.
 #
-# [*install_build_deps*]
-#   Whether or not to install the build tools/libraries necessary to build
-#   certbot's dependencies.
-#
 # [*install_dir*]
 #   The directory to install to. A virtualenv will be created inside this
 #   directory.
@@ -40,7 +36,6 @@ class certbot (
   String  $email,
 
   String  $pip_ensure         = 'present',
-  Boolean $install_build_deps = true,
 
   # These paths are still a hangover from when certbot was called 'letsencrypt'
   String  $install_dir        = '/opt/letsencrypt',
@@ -104,19 +99,6 @@ class certbot (
     "${config_dir}/cli.ini":
       ensure => file,
       mode   => '0644';
-  }
-
-  if $install_build_deps {
-    # Do a *gentle* install of packages... these might be defined elsewhere
-    # These are just the dependencies for cryptography. Thankfully, the Python
-    # module installs the latest pip in the virtualenv so we get manylinux
-    # builds of other things like cffi.
-    ['libssl-dev'].each |$package| {
-      unless defined($package) {
-        package { $package: ensure => installed }
-      }
-      Package[$package] -> Python::Pip['certbot']
-    }
   }
 
   include python
