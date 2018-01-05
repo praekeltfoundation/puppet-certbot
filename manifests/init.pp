@@ -75,34 +75,24 @@ class certbot (
   # To be used by other classes via $certbot::webroot_dir.
   $webroot_dir = "${working_dir}/webroot"
 
-  file {
-    default:
-      owner => 'certbot',
-      group => 'certbot';
+  file [
+    $install_dir,
+    $working_dir,
+    $webroot_dir,
+    $log_dir,
+    $config_dir,
+  ] {
+    ensure => directory,
+    owner  => 'certbot',
+    group  => 'certbot',
+    mode   => '0755',
+  }
 
-    $install_dir:
-      ensure => directory,
-      mode   => '0755';
-
-    $working_dir:
-      ensure => directory,
-      mode   => '0755';
-
-    $webroot_dir:
-      ensure => directory,
-      mode   => '0755';
-
-    $log_dir:
-      ensure => directory,
-      mode   => '0755';
-
-    $config_dir:
-      ensure => directory,
-      mode   => '0755';
-
-    "${config_dir}/cli.ini":
-      ensure => file,
-      mode   => '0644';
+  file { "${config_dir}/cli.ini":
+    ensure => file,
+    owner  => 'certbot',
+    group  => 'certbot',
+    mode   => '0644',
   }
 
   if $manage_python {
