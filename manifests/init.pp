@@ -9,8 +9,8 @@
 # [*email*]
 #   The email address to register with the ACME authority.
 #
-# [*pip_ensure*]
-#   The ensure value for the Python::Pip resource. The version can be set here.
+# [*version*]
+#   The version of certbot to install.
 #
 # [*manage_python*]
 #   Whether or not to define the 'python' class resource.
@@ -51,7 +51,8 @@
 class certbot (
   String  $email,
 
-  String  $pip_ensure         = 'present',
+  Optional[String]
+          $version            = undef,
   Boolean $manage_python      = false,
 
   String  $user               = 'certbot',
@@ -99,7 +100,6 @@ class certbot (
   $webroot_dir = "${working_dir}/webroot"
 
   file { [
-    $install_dir,
     $working_dir,
     $webroot_dir,
     $log_dir,
@@ -118,27 +118,11 @@ class certbot (
     mode   => '0644',
   }
 
-  if $manage_python {
-    class { 'python': virtualenv => present }
-  }
-
-  $virtualenv = "${install_dir}/.venv"
-  python::virtualenv { $virtualenv:
-    ensure => present,
-    owner  => $user,
-    group  => $group,
-  }
-
-  python::pip { 'certbot':
-    ensure     => $pip_ensure,
-    virtualenv => $virtualenv,
-    owner      => $user,
-    group      => $group,
-  }
+  contain certbot::install
 
   # Path to the certbot binary in the virtualenv. To be used by other classes
   # via $certbot::certbot_bin.
-  $certbot_bin = "${virtualenv}/bin/certbot"
+  $certbot_bin = "${install_dir}/bin/certbot"
 
   $_config = merge($default_config, $config, { 'email' => $email })
   $_config.each |$setting, $value| {

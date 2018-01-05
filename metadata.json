@@ -17,10 +17,6 @@
       "version_requirement": ">= 1.2.0 < 3.0.0"
     },
     {
-      "name": "stankevich/python",
-      "version_requirement": ">= 1.18.0 < 2.0.0"
-    },
-    {
       "name": "puppet/nginx",
       "version_requirement": ">= 0.6.0 < 1.0.0"
     }

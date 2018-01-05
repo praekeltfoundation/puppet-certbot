@@ -53,7 +53,7 @@ define certbot::certonly (
 
   exec { "certbot certonly ${name}":
     command => $_command,
-    path    => ["${certbot::virtualenv}/bin"],
+    path    => ["${certbot::install_dir}/bin"],
     user    => $certbot::user,
     creates => "${_live_path}/cert.pem",
   }
