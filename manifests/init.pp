@@ -75,13 +75,13 @@ class certbot (
   # To be used by other classes via $certbot::webroot_dir.
   $webroot_dir = "${working_dir}/webroot"
 
-  file [
+  file { [
     $install_dir,
     $working_dir,
     $webroot_dir,
     $log_dir,
     $config_dir,
-  ] {
+  ]:
     ensure => directory,
     owner  => 'certbot',
     group  => 'certbot',
@@ -96,7 +96,7 @@ class certbot (
   }
 
   if $manage_python {
-    class { 'python': virtualenv => true }
+    class { 'python': virtualenv => present }
   }
 
   $virtualenv = "${install_dir}/.venv"
