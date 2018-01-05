@@ -12,6 +12,9 @@
 # [*pip_ensure*]
 #   The ensure value for the Python::Pip resource. The version can be set here.
 #
+# [*manage_python*]
+#   Whether or not to define the 'python' class resource.
+#
 # [*install_dir*]
 #   The directory to install to. A virtualenv will be created inside this
 #   directory.
@@ -36,6 +39,7 @@ class certbot (
   String  $email,
 
   String  $pip_ensure         = 'present',
+  Boolean $manage_python      = false,
 
   # These paths are still a hangover from when certbot was called 'letsencrypt'
   String  $install_dir        = '/opt/letsencrypt',
@@ -71,37 +75,29 @@ class certbot (
   # To be used by other classes via $certbot::webroot_dir.
   $webroot_dir = "${working_dir}/webroot"
 
-  file {
-    default:
-      owner => 'certbot',
-      group => 'certbot';
-
-    $install_dir:
-      ensure => directory,
-      mode   => '0755';
-
-    $working_dir:
-      ensure => directory,
-      mode   => '0755';
-
-    $webroot_dir:
-      ensure => directory,
-      mode   => '0755';
-
-    $log_dir:
-      ensure => directory,
-      mode   => '0755';
-
-    $config_dir:
-      ensure => directory,
-      mode   => '0755';
-
-    "${config_dir}/cli.ini":
-      ensure => file,
-      mode   => '0644';
+  file { [
+    $install_dir,
+    $working_dir,
+    $webroot_dir,
+    $log_dir,
+    $config_dir,
+  ]:
+    ensure => directory,
+    owner  => 'certbot',
+    group  => 'certbot',
+    mode   => '0755',
   }
 
-  include python
+  file { "${config_dir}/cli.ini":
+    ensure => file,
+    owner  => 'certbot',
+    group  => 'certbot',
+    mode   => '0644',
+  }
+
+  if $manage_python {
+    class { 'python': virtualenv => present }
+  }
 
   $virtualenv = "${install_dir}/.venv"
   python::virtualenv { $virtualenv:
