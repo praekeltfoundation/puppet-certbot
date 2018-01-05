@@ -63,7 +63,7 @@ define certbot::nginx::virtual_server (
           $domains          = undef,
   Hash    $location_params  = {},
   Optional[Boolean]
-          $enable_certs     = false,
+          $enable_certs     = undef,
   Boolean $enable_redirect  = true,
   Boolean $enable_stapling  = true,
   Boolean $manage_cron      = true,
