@@ -32,19 +32,19 @@ class { 'certbot':
 }
 ```
 
-Set up an Nginx server and `nginx_virtual_server` resource:
+Set up an Nginx server and `certbot::nginx::virtual_server` resource:
 ```puppet
 @nginx::resource::server { 'myserver':
   server_name => ['foo.example.com'],
   proxy       => 'http://localhost:5000/',
 }
 
-certbot::nginx_virtual_server { 'myserver': }
+certbot::nginx::virtual_server { 'myserver': }
 ```
 
-After one Puppet run the certificates should be issued. Adjust the `nginx_virtual_server` resource parameter to enable SSL:
+After one Puppet run the certificates should be issued. Adjust the `certbot::nginx::virtual_server` resource parameter to enable SSL:
 ```puppet
-certbot::nginx_virtual_server { 'myserver': enable_certs => true }
+certbot::nginx::virtual_server { 'myserver': enable_certs => true }
 ```
 
 It is also possible for this module to manage the Python module:

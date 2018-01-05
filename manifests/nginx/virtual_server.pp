@@ -1,4 +1,4 @@
-# == Define: certbot::nginx_virtual_server
+# == Define: certbot::nginx::virtual_server
 #
 # Set up an ACME-issued and renewed certificate (Let's Encrypt) with certbot
 # and Nginx.
@@ -6,7 +6,7 @@
 # Step 1: Set up your Nginx stuff, without SSL, preferably using a virtual
 #         server resource (see note).
 # Step 2: Add the certbot class to the node, together with a
-#         certbot::nginx_virtual_server resource for each
+#         certbot::nginx::virtual_server resource for each
 #         nginx::resource::server.
 # Step 3: Do a Puppet run. Check that certbot fetched your certificates.
 # Step 4: Set *enable_certs* to true.
@@ -57,7 +57,7 @@
 #
 # [*nginx_reload_cmd*]
 #   A command to run to reload Nginx after the cron job command succeeds.
-define certbot::nginx_virtual_server (
+define certbot::nginx::virtual_server (
   String  $server           = $name,
   Optional[Array[String, 1]]
           $domains          = undef,
@@ -69,16 +69,6 @@ define certbot::nginx_virtual_server (
   Boolean $manage_cron      = true,
   String  $nginx_reload_cmd = '/usr/sbin/nginx -s reload',
 ) {
-  nginx::resource::location { "acme-challenge-${server}":
-    server      => $server,
-    location    => '/.well-known/acme-challenge/',
-    www_root    => $certbot::webroot_dir,
-    index_files => [],
-    autoindex   => 'off',
-    ssl         => $enable_certs,
-    *           => $location_params,
-  }
-
   # Either fetch certificates for the domains passed as a parameter, or try to
   # detect the domains from the server resource's 'server_name' parameter.
   if $domains {
@@ -92,11 +82,12 @@ define certbot::nginx_virtual_server (
     }
   }
 
-  certbot::webroot { "nginx-${server}":
-    domains          => $_domains,
-    manage_cron      => $manage_cron,
-    cron_success_cmd => $nginx_reload_cmd,
-    require          => Nginx::Resource::Location["acme-challenge-${server}"],
+  certbot::nginx::webroot { $name:
+    domains         => $_domains,
+    server          => $server,
+    manage_cron     => $manage_cron,
+    location_ssl    => $enable_certs,
+    location_params => $location_params,
   }
 
   $_first_domain = $_domains[0]
