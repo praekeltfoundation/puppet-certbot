@@ -39,13 +39,10 @@ define certbot::certonly (
   require certbot
 
   $_certonly_cmd = "${certbot::certbot_bin} --noninteractive --agree-tos certonly"
-  case $plugin {
-    'standalone': {
-      $_mode_cmd = "--standalone --preferred-challenges ${standalone_chall}"
-    }
-    'webroot': {
-      $_mode_cmd = "--webroot --webroot-path ${webroot_path}"
-    }
+  if $plugin == 'standalone' {
+    $_mode_cmd = "--standalone --preferred-challenges ${standalone_chall}"
+  } elsif $plugin == 'webroot' {
+    $_mode_cmd = "--webroot --webroot-path ${webroot_path}"
   }
   $_domains_cmd = join(prefix($domains, '-d '), ' ')
 
