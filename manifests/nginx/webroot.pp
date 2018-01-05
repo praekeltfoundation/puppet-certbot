@@ -41,8 +41,9 @@ define certbot::nginx::webroot (
     ssl         => $location_ssl,
     *           => $location_params,
   }
-  -> certbot::webroot { "nginx-${server}":
+  -> certbot::certonly { "nginx-${server}":
     domains          => $domains,
+    plugin           => 'webroot',
     manage_cron      => $manage_cron,
     cron_success_cmd => $nginx_reload_cmd,
   }
