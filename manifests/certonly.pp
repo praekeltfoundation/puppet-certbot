@@ -13,7 +13,8 @@
 #
 # [*standalone_chall*]
 #   The challenge method to use for the standalone plugin. Either 'http' or
-#   'tls-sni'. Port 80 or 443 needs to be usable for each, respectively.
+#   'tls-sni'. Port 80 or 443 needs to be usable for each, respectively
+#   (generally, certbot will need to run as root for that to work).
 #
 # [*webroot_path*]
 #   The path to the directory to use for the webroot plugin. Currently only a
@@ -56,14 +57,14 @@ define certbot::certonly (
   exec { "certbot certonly ${name}":
     command => $_command,
     path    => ["${certbot::virtualenv}/bin"],
-    user    => 'certbot',
+    user    => $certbot::user,
     creates => "${_live_path}/cert.pem",
   }
 
   if $manage_cron {
     cron { "certbot certonly renew ${name}":
       # Run the command as the certbot user and if it succeeds, run the success command as root
-      command => "/bin/su certbot -s /bin/sh -c '${_command}' && (${cron_success_cmd})",
+      command => "/bin/su ${certbot::user} -s /bin/sh -c '${_command}' && (${cron_success_cmd})",
       user    => 'root',
       hour    => fqdn_rand(24, $name),
       minute  => fqdn_rand(60, $name),
