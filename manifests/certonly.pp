@@ -1,4 +1,4 @@
-# == Define: certbot::webroot
+# == Define: certbot::certonly
 #
 # Certbot certonly command and cron job. Similar to the certonly module in
 # puppet-letsencrypt but more limited and simplified.
