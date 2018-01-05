@@ -31,9 +31,17 @@
 #   fetched. If unset, the *server_name* parameter for the Nginx server resource
 #   will be used as the list of domains.
 #
-# [*location_params*]
+# [*plugin*]
+#   The Certbot certonly plugin to use. Either 'standalone' or 'webroot'.
+#   Defaults to 'webroot'. 'standalone' is useful if the Nginx server is not
+#   serving on port 80 or 443.
+#
+# [*webroot_location_params*]
 #   A hash of any extra parameters to add to the Nginx location resource created
 #   to serve ACME challenge requests.
+#
+# [*standalone_chall*]
+#   The challenge method to use for the standalone plugin.
 #
 # [*enable_certs*]
 #   Whether or not to use the generated certificates for Nginx. This should only
@@ -58,16 +66,20 @@
 # [*nginx_reload_cmd*]
 #   A command to run to reload Nginx after the cron job command succeeds.
 define certbot::nginx::virtual_server (
-  String  $server           = $name,
+  String  $server                   = $name,
   Optional[Array[String, 1]]
-          $domains          = undef,
-  Hash    $location_params  = {},
+          $domains                  = undef,
+  Enum['standalone', 'webroot']
+          $plugin                   = 'webroot',
+  Hash    $webroot_location_params  = {},
+  Enum['http', 'tls-sni']
+          $standalone_chall         = 'http',
   Optional[Boolean]
-          $enable_certs     = undef,
-  Boolean $enable_redirect  = true,
-  Boolean $enable_stapling  = true,
-  Boolean $manage_cron      = true,
-  String  $nginx_reload_cmd = '/usr/sbin/nginx -s reload',
+          $enable_certs             = undef,
+  Boolean $enable_redirect          = true,
+  Boolean $enable_stapling          = true,
+  Boolean $manage_cron              = true,
+  String  $nginx_reload_cmd         = '/usr/sbin/nginx -s reload',
 ) {
   # Either fetch certificates for the domains passed as a parameter, or try to
   # detect the domains from the server resource's 'server_name' parameter.
@@ -80,12 +92,23 @@ define certbot::nginx::virtual_server (
     }
   }
 
-  certbot::nginx::webroot { $name:
-    domains         => $_domains,
-    server          => $server,
-    manage_cron     => $manage_cron,
-    location_ssl    => $enable_certs,
-    location_params => $location_params,
+  if $plugin == 'webroot' {
+    certbot::nginx::webroot { $name:
+      domains          => $_domains,
+      server           => $server,
+      manage_cron      => $manage_cron,
+      nginx_reload_cmd => $nginx_reload_cmd,
+      location_ssl     => $enable_certs,
+      location_params  => $webroot_location_params,
+    }
+  } elsif $plugin == 'standalone' {
+    certbot::certonly { $name:
+      domains          => $_domains,
+      plugin           => 'standalone',
+      standalone_chall => $standalone_chall,
+      manage_cron      => $manage_cron,
+      cron_success_cmd => $nginx_reload_cmd,
+    }
   }
 
   $_first_domain = $_domains[0]

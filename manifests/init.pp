@@ -15,6 +15,19 @@
 # [*manage_python*]
 #   Whether or not to define the 'python' class resource.
 #
+# [*user*]
+#   The user to install and run certbot as. Defaults to 'certbot'. Note that
+#   certbot needs to run as root (to bind to port 80 or 443) for the standalone
+#   challenges to work.
+#
+# [*group*]
+#   The group to install and run certbot as. Defaults to 'certbot'.
+#
+# [*manage_user*]
+#   Whether to manage the creation of the user and group that certbot runs as.
+#   Defaults to true but won't attempt to manage the user or group if they are
+#   'root'.
+#
 # [*install_dir*]
 #   The directory to install to. A virtualenv will be created inside this
 #   directory.
@@ -41,6 +54,10 @@ class certbot (
   String  $pip_ensure         = 'present',
   Boolean $manage_python      = false,
 
+  String  $user               = 'certbot',
+  String  $group              = 'certbot',
+  Boolean $manage_user        = true,
+
   # These paths are still a hangover from when certbot was called 'letsencrypt'
   String  $install_dir        = '/opt/letsencrypt',
   String  $working_dir        = '/var/lib/letsencrypt',
@@ -58,17 +75,23 @@ class certbot (
   },
 ) {
 
-  group { 'certbot':
-    ensure => present,
-    system => true,
-  }
-  user { 'certbot':
-    ensure     => present,
-    gid        => 'certbot',
-    system     => true,
-    managehome => true,
-    home       => $working_dir,
-    shell      => '/usr/sbin/nologin',
+  if $manage_user {
+    if $group != 'root' {
+      group { $group:
+        ensure => present,
+        system => true,
+      }
+    }
+    if $user != 'root' {
+      user { $user:
+        ensure     => present,
+        gid        => $group,
+        system     => true,
+        managehome => true,
+        home       => $working_dir,
+        shell      => '/usr/sbin/nologin',
+      }
+    }
   }
 
   # Path to a directory that can be used for webroot-based challenge responses.
@@ -83,15 +106,15 @@ class certbot (
     $config_dir,
   ]:
     ensure => directory,
-    owner  => 'certbot',
-    group  => 'certbot',
+    owner  => $user,
+    group  => $group,
     mode   => '0755',
   }
 
   file { "${config_dir}/cli.ini":
     ensure => file,
-    owner  => 'certbot',
-    group  => 'certbot',
+    owner  => $user,
+    group  => $group,
     mode   => '0644',
   }
 
@@ -102,15 +125,15 @@ class certbot (
   $virtualenv = "${install_dir}/.venv"
   python::virtualenv { $virtualenv:
     ensure => present,
-    owner  => 'certbot',
-    group  => 'certbot',
+    owner  => $user,
+    group  => $group,
   }
 
   python::pip { 'certbot':
     ensure     => $pip_ensure,
     virtualenv => $virtualenv,
-    owner      => 'certbot',
-    group      => 'certbot',
+    owner      => $user,
+    group      => $group,
   }
 
   # Path to the certbot binary in the virtualenv. To be used by other classes
