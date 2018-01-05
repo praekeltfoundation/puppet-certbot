@@ -12,6 +12,9 @@
 # [*pip_ensure*]
 #   The ensure value for the Python::Pip resource. The version can be set here.
 #
+# [*manage_python*]
+#   Whether or not to define the 'python' class resource.
+#
 # [*install_dir*]
 #   The directory to install to. A virtualenv will be created inside this
 #   directory.
@@ -36,6 +39,7 @@ class certbot (
   String  $email,
 
   String  $pip_ensure         = 'present',
+  Boolean $manage_python      = false,
 
   # These paths are still a hangover from when certbot was called 'letsencrypt'
   String  $install_dir        = '/opt/letsencrypt',
@@ -101,7 +105,9 @@ class certbot (
       mode   => '0644';
   }
 
-  include python
+  if $manage_python {
+    class { 'python': virtualenv => true }
+  }
 
   $virtualenv = "${install_dir}/.venv"
   python::virtualenv { $virtualenv:

@@ -46,3 +46,11 @@ After one Puppet run the certificates should be issued. Adjust the `nginx_virtua
 ```puppet
 certbot::nginx_virtual_server { 'myserver': enable_certs => true }
 ```
+
+It is also possible for this module to manage the Python module:
+```puppet
+class { 'certbot':
+  email         => 'letsencrypt@example.com',
+  manage_python => true,
+}
+```
