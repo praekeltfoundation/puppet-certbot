@@ -17,7 +17,6 @@ We don't recommend you use this in production just yet for the following reasons
 * There are no real tests yet
 * We've only used this on Debian 8 (Jessie)
 * We've only used this for webroot-based (`http-01`) challenges with Nginx
-* There are some complications around the way Certbot is installed as some Python modules must be installed from source, requiring a compiler and relevant development libraries
 * We use some hacky Puppet features (virtual resources) to "auto-magically" set up SSL settings for Nginx servers
 * The code is likely to change substantially
 
@@ -25,7 +24,6 @@ We don't recommend you use this in production just yet for the following reasons
 Set up the basics: install Python and Certbot.
 ```puppet
 class { 'python':
-  dev        => present,
   virtualenv => present,
 }
 ->
