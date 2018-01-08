@@ -22,7 +22,15 @@ class certbot::config {
     mode   => '0644',
   }
 
-  $_config = merge($certbot::default_config, $certbot::config, {'email' => $certbot::email})
+  $_base_config = {
+    'email'        => $certbot::email,
+    'config-dir'   => $certbot::config_dir,
+    'work-dir'     => $certbot::working_dir,
+    'webroot-path' => $certbot::webroot_dir,
+    'logs-dir'     => $certbot::log_dir,
+  }
+
+  $_config = merge($certbot::default_config, $certbot::config, $_base_config)
   $_config.each |$setting, $value| {
     ini_setting { "${certbot::config_dir}/cli.ini ${setting} ${value}":
       ensure  => present,
