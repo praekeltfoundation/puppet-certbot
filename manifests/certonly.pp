@@ -35,23 +35,23 @@ define certbot::certonly (
 ) {
   include certbot
 
-  $_certonly_cmd = "${certbot::certbot_bin} --noninteractive --agree-tos certonly"
+  $_certonly_args = [$certbot::certbot_bin, '--noninteractive', '--agree-tos', 'certonly']
   if $plugin == 'standalone' {
-    if $preferred_challenges {
-      $_plugin_cmd = join(['--standalone', '--preferred-challenges', join($preferred_challenges, ',')], ' ')
+    if !empty($preferred_challenges) {
+      $_plugin_args = ['--standalone', '--preferred-challenges', join($preferred_challenges, ',')]
     } else {
-      $_plugin_cmd = '--standalone'
+      $_plugin_args = ['--standalone']
     }
   } elsif $plugin == 'webroot' {
     if $webroot_path {
-      $_plugin_cmd = "--webroot --webroot-path ${webroot_path}"
+      $_plugin_args = ['--webroot', '--webroot-path', $webroot_path]
     } else {
-      $_plugin_cmd = '--webroot'
+      $_plugin_args = ['--webroot']
     }
   }
-  $_domains_cmd = join(prefix($domains, '-d '), ' ')
+  $_domains_args = flatten($domains.map |$domain| { ['-d', $domain] })
 
-  $_command = join([$_certonly_cmd, $_plugin_cmd, $_domains_cmd], ' ')
+  $_command = join($_certonly_args + $_plugin_args + $_domains_args, ' ')
 
   $_first_domain = $domains[0]
   $_live_path = "${certbot::config_dir}/live/${_first_domain}"
