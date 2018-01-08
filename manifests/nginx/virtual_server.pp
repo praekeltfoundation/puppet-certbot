@@ -40,8 +40,8 @@
 #   A hash of any extra parameters to add to the Nginx location resource created
 #   to serve ACME challenge requests.
 #
-# [*standalone_chall*]
-#   The challenge method to use for the standalone plugin.
+# [*standalone_extra_params*]
+#   Extra parameters to pass to the standalone challenge resource.
 #
 # [*enable_certs*]
 #   Whether or not to use the generated certificates for Nginx. This should only
@@ -72,8 +72,7 @@ define certbot::nginx::virtual_server (
   Enum['standalone', 'webroot']
           $plugin                   = 'webroot',
   Hash    $webroot_location_params  = {},
-  Enum['http', 'tls-sni']
-          $standalone_chall         = 'http',
+  Hash    $standalone_extra_params  = {},
   Optional[Boolean]
           $enable_certs             = undef,
   Boolean $enable_redirect          = true,
@@ -105,9 +104,9 @@ define certbot::nginx::virtual_server (
     certbot::certonly { $name:
       domains          => $_domains,
       plugin           => 'standalone',
-      standalone_chall => $standalone_chall,
       manage_cron      => $manage_cron,
       cron_success_cmd => $nginx_reload_cmd,
+      *                => $standalone_extra_params,
     }
   }
 
