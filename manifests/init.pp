@@ -75,63 +75,15 @@ class certbot (
     'keep-until-expiring' => 'True',
   },
 ) {
-
-  if $manage_user {
-    if $group != 'root' {
-      group { $group:
-        ensure => present,
-        system => true,
-      }
-    }
-    if $user != 'root' {
-      user { $user:
-        ensure     => present,
-        gid        => $group,
-        system     => true,
-        managehome => true,
-        home       => $working_dir,
-        shell      => '/usr/sbin/nologin',
-      }
-    }
-  }
-
   # Path to a directory that can be used for webroot-based challenge responses.
   # To be used by other classes via $certbot::webroot_dir.
   $webroot_dir = "${working_dir}/webroot"
-
-  file { [
-    $working_dir,
-    $webroot_dir,
-    $log_dir,
-    $config_dir,
-  ]:
-    ensure => directory,
-    owner  => $user,
-    group  => $group,
-    mode   => '0755',
-  }
-
-  file { "${config_dir}/cli.ini":
-    ensure => file,
-    owner  => $user,
-    group  => $group,
-    mode   => '0644',
-  }
-
-  contain certbot::install
 
   # Path to the certbot binary in the virtualenv. To be used by other classes
   # via $certbot::certbot_bin.
   $certbot_bin = "${install_dir}/bin/certbot"
 
-  $_config = merge($default_config, $config, { 'email' => $email })
-  $_config.each |$setting, $value| {
-    ini_setting { "${config_dir}/cli.ini ${setting} ${value}":
-      ensure  => present,
-      path    => "${config_dir}/cli.ini",
-      section => '',
-      setting => $setting,
-      value   => $value,
-    }
-  }
+  contain certbot::user
+  contain certbot::install
+  contain certbot::config
 }
