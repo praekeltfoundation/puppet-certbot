@@ -15,7 +15,7 @@ class certbot::config {
     mode   => '0755',
   }
 
-  file { "${certbot::config_dir}/cli.ini":
+  file { $certbot::config_file:
     ensure => file,
     owner  => $certbot::user,
     group  => $certbot::group,
@@ -32,9 +32,9 @@ class certbot::config {
 
   $_config = merge($certbot::default_config, $certbot::config, $_base_config)
   $_config.each |$setting, $value| {
-    ini_setting { "${certbot::config_dir}/cli.ini ${setting} ${value}":
+    ini_setting { "${certbot::config_file} ${setting} ${value}":
       ensure  => present,
-      path    => "${certbot::config_dir}/cli.ini",
+      path    => $certbot::config_file,
       section => '',
       setting => $setting,
       value   => $value,

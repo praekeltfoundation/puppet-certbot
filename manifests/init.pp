@@ -75,6 +75,10 @@ class certbot (
     'keep-until-expiring' => 'True',
   },
 ) {
+  # Path to the certbot configuration file. To be used by other classes via
+  # $certbot::config_file.
+  $config_file = "${config_dir}/cli.ini"
+
   # Path to a directory that can be used for webroot-based challenge responses.
   # To be used by other classes via $certbot::webroot_dir.
   $webroot_dir = "${working_dir}/webroot"
