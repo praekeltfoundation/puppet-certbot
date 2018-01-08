@@ -30,7 +30,7 @@ class certbot::config {
     'logs-dir'     => $certbot::log_dir,
   }
 
-  $_config = merge($certbot::default_config, $certbot::config, $_base_config)
+  $_config = $certbot::default_config + $certbot::config + $_base_config
   $_config.each |$setting, $value| {
     ini_setting { "${certbot::config_file} ${setting} ${value}":
       ensure  => present,

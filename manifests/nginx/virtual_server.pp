@@ -116,7 +116,7 @@ define certbot::nginx::virtual_server (
 
   if $enable_certs == undef {
     if $certbot::config_dir == '/etc/letsencrypt' {
-      $_enable_certs = member($::certbot_live_certs, $_first_domain)
+      $_enable_certs = $_first_domain in $::certbot_live_certs
     } else {
       $_warning = @("END"/L)
 Certificate presence can only be detected with the default config directory,
@@ -151,7 +151,7 @@ adjust the \$enable_certs parameter manually to enable use of the certificates.
       false => {},
     }
 
-    $ssl_params = merge($_cert_params, $_redirect_params, $_stapling_params)
+    $ssl_params = $_cert_params + $_redirect_params + $_stapling_params
   } else {
     $ssl_params = {}
   }
