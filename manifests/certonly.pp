@@ -11,10 +11,9 @@
 # [*plugin*]
 #   The Certbot certonly plugin to use. Either 'standalone' or 'webroot'.
 #
-# [*standalone_chall*]
-#   The challenge method to use for the standalone plugin. Either 'http' or
-#   'tls-sni'. Port 80 or 443 needs to be usable for each, respectively
-#   (generally, certbot will need to run as root for that to work).
+# [*preferred_challenges*]
+#   An ordered list of challenge methods to use. Currently only used for the
+#   standalone plugin
 #
 # [*webroot_path*]
 #   The path to the directory to use for the webroot plugin. Currently only a
@@ -27,26 +26,27 @@
 # [*cron_success_cmd*]
 #   Command to run after the cron job succeeds.
 define certbot::certonly (
-  Array[String, 1]
-          $domains,
-  Enum['standalone', 'webroot']
-          $plugin           = 'webroot',
-  Enum['http', 'tls-sni']
-          $standalone_chall = 'http',
-  Optional[Stdlib::Absolutepath]
-          $webroot_path     = undef,
-  Boolean $manage_cron      = true,
-  String  $cron_success_cmd = '/bin/true'
+  Array[String, 1]               $domains,
+  Enum['standalone', 'webroot']  $plugin               = 'webroot',
+  Array[String]                  $preferred_challenges = [],
+  Optional[Stdlib::Absolutepath] $webroot_path         = undef,
+  Boolean                        $manage_cron          = true,
+  String                         $cron_success_cmd     = '/bin/true'
 ) {
   include certbot
 
   $_certonly_cmd = "${certbot::certbot_bin} --noninteractive --agree-tos certonly"
   if $plugin == 'standalone' {
-    $_plugin_cmd = "--standalone --preferred-challenges ${standalone_chall}"
+    if $preferred_challenges {
+      $_plugin_cmd = join(['--standalone', '--preferred-challenges', join($preferred_challenges, ',')], ' ')
+    } else {
+      $_plugin_cmd = '--standalone'
+    }
   } elsif $plugin == 'webroot' {
-    $_plugin_cmd = $webroot_path ? {
-      undef   => '--webroot',
-      default => "--webroot --webroot-path ${webroot_path}",
+    if $webroot_path {
+      $_plugin_cmd = "--webroot --webroot-path ${webroot_path}"
+    } else {
+      $_plugin_cmd = '--webroot'
     }
   }
   $_domains_cmd = join(prefix($domains, '-d '), ' ')
