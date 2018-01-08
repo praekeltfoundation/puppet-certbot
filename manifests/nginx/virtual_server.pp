@@ -87,24 +87,6 @@ define certbot::nginx::virtual_server (
     }
   }
 
-  if $plugin == 'webroot' {
-    certbot::nginx::webroot { $name:
-      domains          => $_domains,
-      server           => $server,
-      nginx_reload_cmd => $nginx_reload_cmd,
-      location_ssl     => $enable_certs,
-      location_params  => $webroot_location_params,
-      certonly_params  => $certonly_params,
-    }
-  } elsif $plugin == 'standalone' {
-    certbot::certonly { $name:
-      domains          => $_domains,
-      plugin           => 'standalone',
-      cron_success_cmd => $nginx_reload_cmd,
-      *                => $certonly_params,
-    }
-  }
-
   $_first_domain = $_domains[0]
   $_live_path = "${certbot::config_dir}/live/${_first_domain}"
 
@@ -122,6 +104,24 @@ adjust the \$enable_certs parameter manually to enable use of the certificates.
     }
   } else {
     $_enable_certs = $enable_certs
+  }
+
+  if $plugin == 'webroot' {
+    certbot::nginx::webroot { $name:
+      domains          => $_domains,
+      server           => $server,
+      nginx_reload_cmd => $nginx_reload_cmd,
+      location_ssl     => $_enable_certs,
+      location_params  => $webroot_location_params,
+      certonly_params  => $certonly_params,
+    }
+  } elsif $plugin == 'standalone' {
+    certbot::certonly { $name:
+      domains          => $_domains,
+      plugin           => 'standalone',
+      cron_success_cmd => $nginx_reload_cmd,
+      *                => $certonly_params,
+    }
   }
 
   if $_enable_certs {

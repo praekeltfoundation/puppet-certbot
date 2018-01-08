@@ -25,12 +25,12 @@
 # [*certonly_params*]
 #   A hash of any extra parameters to add to the certonly resource.
 define certbot::nginx::webroot (
-  Array[String] $domains,
-  String        $server           = $name,
-  String        $nginx_reload_cmd = '/usr/sbin/nginx -s reload',
-  Boolean       $location_ssl     = false,
-  Hash          $location_params  = {},
-  Hash          $certonly_params  = {},
+  Array[String]     $domains,
+  String            $server           = $name,
+  String            $nginx_reload_cmd = '/usr/sbin/nginx -s reload',
+  Optional[Boolean] $location_ssl     = undef,
+  Hash              $location_params  = {},
+  Hash              $certonly_params  = {},
 ) {
   nginx::resource::location { "acme-challenge-${server}":
     server      => $server,
