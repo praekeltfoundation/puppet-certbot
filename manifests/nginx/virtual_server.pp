@@ -40,8 +40,8 @@
 #   A hash of any extra parameters to add to the Nginx location resource created
 #   to serve ACME challenge requests.
 #
-# [*standalone_extra_params*]
-#   Extra parameters to pass to the standalone challenge resource.
+# [*certonly_params*]
+#   Extra parameters to pass to the certonly resource.
 #
 # [*enable_certs*]
 #   Whether or not to use the generated certificates for Nginx. This should only
@@ -60,9 +60,6 @@
 #   the *ssl_stapling*, *ssl_stapling_verify*, or *ssl_trusted_cert* parameters
 #   on the virtual server resource.
 #
-# [*manage_cron*]
-#   Whether or not to set up a cron job to renew the certificate.
-#
 # [*nginx_reload_cmd*]
 #   A command to run to reload Nginx after the cron job command succeeds.
 define certbot::nginx::virtual_server (
@@ -72,12 +69,11 @@ define certbot::nginx::virtual_server (
   Enum['standalone', 'webroot']
           $plugin                   = 'webroot',
   Hash    $webroot_location_params  = {},
-  Hash    $standalone_extra_params  = {},
+  Hash    $certonly_params          = {},
   Optional[Boolean]
           $enable_certs             = undef,
   Boolean $enable_redirect          = true,
   Boolean $enable_stapling          = true,
-  Boolean $manage_cron              = true,
   String  $nginx_reload_cmd         = '/usr/sbin/nginx -s reload',
 ) {
   # Either fetch certificates for the domains passed as a parameter, or try to
@@ -95,18 +91,17 @@ define certbot::nginx::virtual_server (
     certbot::nginx::webroot { $name:
       domains          => $_domains,
       server           => $server,
-      manage_cron      => $manage_cron,
       nginx_reload_cmd => $nginx_reload_cmd,
       location_ssl     => $enable_certs,
       location_params  => $webroot_location_params,
+      certonly_params  => $certonly_params,
     }
   } elsif $plugin == 'standalone' {
     certbot::certonly { $name:
       domains          => $_domains,
       plugin           => 'standalone',
-      manage_cron      => $manage_cron,
       cron_success_cmd => $nginx_reload_cmd,
-      *                => $standalone_extra_params,
+      *                => $certonly_params,
     }
   }
 
