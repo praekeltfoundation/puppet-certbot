@@ -49,26 +49,23 @@
 # [*default_config*]
 #   The base config settings.
 class certbot (
-  String  $email,
+  String               $email,
 
-  Optional[String]
-          $version            = undef,
-  Boolean $manage_python      = false,
+  Optional[String]     $version        = undef,
+  Boolean              $manage_python  = false,
 
-  String  $user               = 'certbot',
-  String  $group              = 'certbot',
-  Boolean $manage_user        = true,
+  String               $user           = 'certbot',
+  String               $group          = 'certbot',
+  Boolean              $manage_user    = true,
 
   # These paths are still a hangover from when certbot was called 'letsencrypt'
-  String  $install_dir        = '/opt/letsencrypt',
-  String  $working_dir        = '/var/lib/letsencrypt',
-  String  $config_dir         = '/etc/letsencrypt',
-  String  $log_dir            = '/var/log/letsencrypt',
+  Stdlib::Absolutepath $install_dir    = '/opt/letsencrypt',
+  Stdlib::Absolutepath $working_dir    = '/var/lib/letsencrypt',
+  Stdlib::Absolutepath $config_dir     = '/etc/letsencrypt',
+  Stdlib::Absolutepath $log_dir        = '/var/log/letsencrypt',
 
-  Hash[String, String]
-          $config             = {},
-  Hash[String, String]
-          $default_config     = {
+  Hash[String, String] $config         = {},
+  Hash[String, String] $default_config = {
     'server'              => 'https://acme-v01.api.letsencrypt.org/directory',
     'no-eff-email'        => 'False',
     'expand'              => 'True',

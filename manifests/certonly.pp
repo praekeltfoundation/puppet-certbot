@@ -32,7 +32,8 @@ define certbot::certonly (
           $plugin           = 'webroot',
   Enum['http', 'tls-sni']
           $standalone_chall = 'http',
-  String  $webroot_path     = $certbot::webroot_dir,
+  Stdlib::Absolutepath
+          $webroot_path     = $certbot::webroot_dir,
   Boolean $manage_cron      = true,
   String  $cron_success_cmd = '/bin/true'
 ) {
