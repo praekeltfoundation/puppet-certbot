@@ -35,7 +35,12 @@ define certbot::certonly (
 ) {
   include certbot
 
-  $_certonly_args = [$certbot::certbot_bin, '--noninteractive', '--agree-tos', 'certonly']
+  $_certonly_args = [
+    $certbot::certbot_bin,
+    '--config', $certbot::config_file,
+    '--noninteractive', '--agree-tos',
+    'certonly'
+  ]
   if $plugin == 'standalone' {
     if !empty($preferred_challenges) {
       $_plugin_args = ['--standalone', '--preferred-challenges', join($preferred_challenges, ',')]
