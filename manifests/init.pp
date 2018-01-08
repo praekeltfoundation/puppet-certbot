@@ -48,21 +48,24 @@
 #
 # [*default_config*]
 #   The base config settings.
+#
+# [*nginx_virtual_servers*]
+#   Hash of certbot::nginx::virtual_server resources to create.
 class certbot (
   String               $email,
 
-  Optional[String]     $version        = undef,
-  Boolean              $manage_python  = false,
+  Optional[String]     $version       = undef,
+  Boolean              $manage_python = false,
 
-  String               $user           = 'certbot',
-  String               $group          = 'certbot',
-  Boolean              $manage_user    = true,
+  String               $user        = 'certbot',
+  String               $group       = 'certbot',
+  Boolean              $manage_user = true,
 
   # These paths are still a hangover from when certbot was called 'letsencrypt'
-  Stdlib::Absolutepath $install_dir    = '/opt/letsencrypt',
-  Stdlib::Absolutepath $working_dir    = '/var/lib/letsencrypt',
-  Stdlib::Absolutepath $config_dir     = '/etc/letsencrypt',
-  Stdlib::Absolutepath $log_dir        = '/var/log/letsencrypt',
+  Stdlib::Absolutepath $install_dir = '/opt/letsencrypt',
+  Stdlib::Absolutepath $working_dir = '/var/lib/letsencrypt',
+  Stdlib::Absolutepath $config_dir  = '/etc/letsencrypt',
+  Stdlib::Absolutepath $log_dir     = '/var/log/letsencrypt',
 
   Hash[String, String] $config         = {},
   Hash[String, String] $default_config = {
@@ -71,6 +74,8 @@ class certbot (
     'expand'              => 'True',
     'keep-until-expiring' => 'True',
   },
+
+  Hash                 $nginx_virtual_servers = {},
 ) {
   # Path to the certbot configuration file. To be used by other classes via
   # $certbot::config_file.
@@ -87,4 +92,6 @@ class certbot (
   contain certbot::user
   contain certbot::install
   contain certbot::config
+
+  create_resources(certbot::nginx::virtual_server, $nginx_virtual_servers)
 }

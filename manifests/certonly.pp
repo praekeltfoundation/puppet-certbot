@@ -37,7 +37,7 @@ define certbot::certonly (
   Boolean $manage_cron      = true,
   String  $cron_success_cmd = '/bin/true'
 ) {
-  require certbot
+  include certbot
 
   $_certonly_cmd = "${certbot::certbot_bin} --noninteractive --agree-tos certonly"
   if $plugin == 'standalone' {
