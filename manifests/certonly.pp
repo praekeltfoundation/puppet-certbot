@@ -18,7 +18,8 @@
 #
 # [*webroot_path*]
 #   The path to the directory to use for the webroot plugin. Currently only a
-#   single webroot directory is supported.
+#   single webroot directory is supported. If unset, defaults to the webroot
+#   path in the config file, which is generally $certbot::webroot_dir.
 #
 # [*manage_cron*]
 #   Whether or not to manage a cron job for renewals.
@@ -32,8 +33,8 @@ define certbot::certonly (
           $plugin           = 'webroot',
   Enum['http', 'tls-sni']
           $standalone_chall = 'http',
-  Stdlib::Absolutepath
-          $webroot_path     = $certbot::webroot_dir,
+  Optional[Stdlib::Absolutepath]
+          $webroot_path     = undef,
   Boolean $manage_cron      = true,
   String  $cron_success_cmd = '/bin/true'
 ) {
@@ -41,13 +42,16 @@ define certbot::certonly (
 
   $_certonly_cmd = "${certbot::certbot_bin} --noninteractive --agree-tos certonly"
   if $plugin == 'standalone' {
-    $_mode_cmd = "--standalone --preferred-challenges ${standalone_chall}"
+    $_plugin_cmd = "--standalone --preferred-challenges ${standalone_chall}"
   } elsif $plugin == 'webroot' {
-    $_mode_cmd = "--webroot --webroot-path ${webroot_path}"
+    $_plugin_cmd = $webroot_path ? {
+      undef   => '--webroot',
+      default => "--webroot --webroot-path ${webroot_path}",
+    }
   }
   $_domains_cmd = join(prefix($domains, '-d '), ' ')
 
-  $_command = join([$_certonly_cmd, $_mode_cmd, $_domains_cmd], ' ')
+  $_command = join([$_certonly_cmd, $_plugin_cmd, $_domains_cmd], ' ')
 
   $_first_domain = $domains[0]
   $_live_path = "${certbot::config_dir}/live/${_first_domain}"
