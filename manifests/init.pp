@@ -97,7 +97,6 @@ class certbot (
   # via $certbot::certbot_bin.
   $certbot_bin = "${install_dir}/bin/certbot"
 
-  contain certbot::user
   contain certbot::install
   contain certbot::config
 
