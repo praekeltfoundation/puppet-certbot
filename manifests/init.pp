@@ -9,12 +9,24 @@
 # [*email*]
 #   The email address to register with the ACME authority.
 #
-# [*pip_ensure*]
-#   The ensure value for the Python::Pip resource. The version can be set here.
+# [*version*]
+#   The version of certbot to install.
 #
-# [*install_build_deps*]
-#   Whether or not to install the build tools/libraries necessary to build
-#   certbot's dependencies.
+# [*manage_python*]
+#   Whether or not to define the 'python' class resource.
+#
+# [*user*]
+#   The user to install and run certbot as. Defaults to 'certbot'. Note that
+#   certbot needs to run as root (to bind to port 80 or 443) for the standalone
+#   challenges to work.
+#
+# [*group*]
+#   The group to install and run certbot as. Defaults to 'certbot'.
+#
+# [*manage_user*]
+#   Whether to manage the creation of the user and group that certbot runs as.
+#   Defaults to true but won't attempt to manage the user or group if they are
+#   'root'.
 #
 # [*install_dir*]
 #   The directory to install to. A virtualenv will be created inside this
@@ -36,117 +48,59 @@
 #
 # [*default_config*]
 #   The base config settings.
+#
+# [*certonlys*]
+#   Hash of certbot::certonly resources to create.
+#
+# [*nginx_virtual_servers*]
+#   Hash of certbot::nginx::virtual_server resources to create.
+#
+# [*nginx_webroots*]
+#   Hash of certbot::nginx::webroot resources to create.
 class certbot (
-  String  $email,
+  String $email,
 
-  String  $pip_ensure         = 'present',
-  Boolean $install_build_deps = true,
+  Optional[String] $version       = undef,
+  Boolean          $manage_python = false,
+
+  String  $user        = 'certbot',
+  String  $group       = 'certbot',
+  Boolean $manage_user = true,
 
   # These paths are still a hangover from when certbot was called 'letsencrypt'
-  String  $install_dir        = '/opt/letsencrypt',
-  String  $working_dir        = '/var/lib/letsencrypt',
-  String  $config_dir         = '/etc/letsencrypt',
-  String  $log_dir            = '/var/log/letsencrypt',
+  Stdlib::Absolutepath $install_dir = '/opt/letsencrypt',
+  Stdlib::Absolutepath $working_dir = '/var/lib/letsencrypt',
+  Stdlib::Absolutepath $config_dir  = '/etc/letsencrypt',
+  Stdlib::Absolutepath $log_dir     = '/var/log/letsencrypt',
 
-  Hash[String, String]
-          $config             = {},
-  Hash[String, String]
-          $default_config     = {
-    'server'              => 'https://acme-v01.api.letsencrypt.org/directory',
+  Hash[String, String] $config         = {},
+  Hash[String, String] $default_config = {
+    'server'              => 'https://acme-v02.api.letsencrypt.org/directory',
     'no-eff-email'        => 'False',
     'expand'              => 'True',
     'keep-until-expiring' => 'True',
   },
-) {
 
-  group { 'certbot':
-    ensure => present,
-    system => true,
-  }
-  user { 'certbot':
-    ensure     => present,
-    gid        => 'certbot',
-    system     => true,
-    managehome => true,
-    home       => $working_dir,
-    shell      => '/usr/sbin/nologin',
-  }
+  Hash $certonlys             = {},
+  Hash $nginx_virtual_servers = {},
+  Hash $nginx_webroots        = {},
+) {
+  # Path to the certbot configuration file. To be used by other classes via
+  # $certbot::config_file.
+  $config_file = "${config_dir}/cli.ini"
 
   # Path to a directory that can be used for webroot-based challenge responses.
   # To be used by other classes via $certbot::webroot_dir.
   $webroot_dir = "${working_dir}/webroot"
 
-  file {
-    default:
-      owner => 'certbot',
-      group => 'certbot';
-
-    $install_dir:
-      ensure => directory,
-      mode   => '0755';
-
-    $working_dir:
-      ensure => directory,
-      mode   => '0755';
-
-    $webroot_dir:
-      ensure => directory,
-      mode   => '0755';
-
-    $log_dir:
-      ensure => directory,
-      mode   => '0755';
-
-    $config_dir:
-      ensure => directory,
-      mode   => '0755';
-
-    "${config_dir}/cli.ini":
-      ensure => file,
-      mode   => '0644';
-  }
-
-  if $install_build_deps {
-    # Do a *gentle* install of packages... these might be defined elsewhere
-    # These are just the dependencies for cryptography. Thankfully, the Python
-    # module installs the latest pip in the virtualenv so we get manylinux
-    # builds of other things like cffi.
-    ['libssl-dev'].each |$package| {
-      unless defined($package) {
-        package { $package: ensure => installed }
-      }
-      Package[$package] -> Python::Pip['certbot']
-    }
-  }
-
-  include python
-
-  $virtualenv = "${install_dir}/.venv"
-  python::virtualenv { $virtualenv:
-    ensure => present,
-    owner  => 'certbot',
-    group  => 'certbot',
-  }
-
-  python::pip { 'certbot':
-    ensure     => $pip_ensure,
-    virtualenv => $virtualenv,
-    owner      => 'certbot',
-    group      => 'certbot',
-  }
-
   # Path to the certbot binary in the virtualenv. To be used by other classes
   # via $certbot::certbot_bin.
-  $certbot_bin = "${virtualenv}/bin/certbot"
+  $certbot_bin = "${install_dir}/bin/certbot"
 
-  $_config = merge($default_config, $config, { 'email' => $email })
-  $_config.each |$setting, $value| {
-    ini_setting { "${config_dir}/cli.ini ${setting} ${value}":
-      ensure  => present,
-      path    => "${config_dir}/cli.ini",
-      section => '',
-      setting => $setting,
-      value   => $value,
-    }
-  }
+  contain certbot::install
+  contain certbot::config
+
+  create_resources(certbot::certonly, $certonlys)
+  create_resources(certbot::nginx::virtual_server, $nginx_virtual_servers)
+  create_resources(certbot::nginx::webroot, $nginx_webroots)
 }

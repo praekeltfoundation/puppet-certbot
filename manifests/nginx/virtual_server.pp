@@ -1,4 +1,4 @@
-# == Define: certbot::nginx_virtual_server
+# == Define: certbot::nginx::virtual_server
 #
 # Set up an ACME-issued and renewed certificate (Let's Encrypt) with certbot
 # and Nginx.
@@ -6,7 +6,7 @@
 # Step 1: Set up your Nginx stuff, without SSL, preferably using a virtual
 #         server resource (see note).
 # Step 2: Add the certbot class to the node, together with a
-#         certbot::nginx_virtual_server resource for each
+#         certbot::nginx::virtual_server resource for each
 #         nginx::resource::server.
 # Step 3: Do a Puppet run. Check that certbot fetched your certificates.
 # Step 4: Set *enable_certs* to true.
@@ -31,9 +31,17 @@
 #   fetched. If unset, the *server_name* parameter for the Nginx server resource
 #   will be used as the list of domains.
 #
-# [*location_params*]
+# [*plugin*]
+#   The Certbot certonly plugin to use. Either 'standalone' or 'webroot'.
+#   Defaults to 'webroot'. 'standalone' is useful if the Nginx server is not
+#   serving on port 80 or 443.
+#
+# [*webroot_location_params*]
 #   A hash of any extra parameters to add to the Nginx location resource created
 #   to serve ACME challenge requests.
+#
+# [*certonly_params*]
+#   Extra parameters to pass to the certonly resource.
 #
 # [*enable_certs*]
 #   Whether or not to use the generated certificates for Nginx. This should only
@@ -52,56 +60,71 @@
 #   the *ssl_stapling*, *ssl_stapling_verify*, or *ssl_trusted_cert* parameters
 #   on the virtual server resource.
 #
-# [*manage_cron*]
-#   Whether or not to set up a cron job to renew the certificate.
-#
 # [*nginx_reload_cmd*]
 #   A command to run to reload Nginx after the cron job command succeeds.
-define certbot::nginx_virtual_server (
-  String  $server           = $name,
+define certbot::nginx::virtual_server (
+  String  $server                   = $name,
   Optional[Array[String, 1]]
-          $domains          = undef,
-  Hash    $location_params  = {},
-  Boolean $enable_certs     = false,
-  Boolean $enable_redirect  = true,
-  Boolean $enable_stapling  = true,
-  Boolean $manage_cron      = true,
-  String  $nginx_reload_cmd = '/usr/sbin/nginx -s reload',
+          $domains                  = undef,
+  Enum['standalone', 'webroot']
+          $plugin                   = 'webroot',
+  Hash    $webroot_location_params  = {},
+  Hash    $certonly_params          = {},
+  Optional[Boolean]
+          $enable_certs             = undef,
+  Boolean $enable_redirect          = true,
+  Boolean $enable_stapling          = true,
+  String  $nginx_reload_cmd         = '/usr/sbin/nginx -s reload',
 ) {
-  nginx::resource::location { "acme-challenge-${server}":
-    server      => $server,
-    location    => '/.well-known/acme-challenge/',
-    www_root    => $certbot::webroot_dir,
-    index_files => [],
-    autoindex   => 'off',
-    ssl         => $enable_certs,
-    *           => $location_params,
-  }
-
   # Either fetch certificates for the domains passed as a parameter, or try to
   # detect the domains from the server resource's 'server_name' parameter.
   if $domains {
     $_domains = $domains
   } else {
     $_domains = getparam(Nginx::Resource::Server[$server], 'server_name')
-    # stdlib >= 4.13.0 getparam() returns false if it can't find the param.
-    # Earlier versions return an empty string.
-    if ! $_domains or $_domains == '' {
+    if ! $_domains {
       fail("Unable to find Nginx server resource '${server}' and no domains specified.")
     }
-  }
-
-  certbot::webroot { "nginx-${server}":
-    domains          => $_domains,
-    manage_cron      => $manage_cron,
-    cron_success_cmd => $nginx_reload_cmd,
-    require          => Nginx::Resource::Location["acme-challenge-${server}"],
   }
 
   $_first_domain = $_domains[0]
   $_live_path = "${certbot::config_dir}/live/${_first_domain}"
 
-  if $enable_certs {
+  if $enable_certs == undef {
+    if $certbot::config_dir == '/etc/letsencrypt' {
+      $_enable_certs = $_first_domain in $::certbot_live_certs
+    } else {
+      $_warning = @("END"/L)
+Certificate presence can only be detected with the default config directory,
+\$certbot::config_dir='/etc/letsencrypt', not '${certbot::config_dir}'. You must
+adjust the \$enable_certs parameter manually to enable use of the certificates.
+| END
+      warning($_warning)
+      $_enable_certs = false
+    }
+  } else {
+    $_enable_certs = $enable_certs
+  }
+
+  if $plugin == 'webroot' {
+    certbot::nginx::webroot { $name:
+      domains          => $_domains,
+      server           => $server,
+      nginx_reload_cmd => $nginx_reload_cmd,
+      location_ssl     => $_enable_certs,
+      location_params  => $webroot_location_params,
+      certonly_params  => $certonly_params,
+    }
+  } elsif $plugin == 'standalone' {
+    certbot::certonly { $name:
+      domains          => $_domains,
+      plugin           => 'standalone',
+      cron_success_cmd => $nginx_reload_cmd,
+      *                => $certonly_params,
+    }
+  }
+
+  if $_enable_certs {
     $_cert_params = {
       ssl      => true,
       ssl_cert => "${_live_path}/fullchain.pem",
@@ -122,7 +145,7 @@ define certbot::nginx_virtual_server (
       false => {},
     }
 
-    $ssl_params = merge($_cert_params, $_redirect_params, $_stapling_params)
+    $ssl_params = $_cert_params + $_redirect_params + $_stapling_params
   } else {
     $ssl_params = {}
   }

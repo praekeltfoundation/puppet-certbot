@@ -3,7 +3,7 @@ require 'metadata-json-lint/rake_task'
 require 'rubocop/rake_task'
 
 task :librarian_spec_prep do
-  sh 'librarian-puppet install --path=spec/fixtures/modules/'
+  sh 'librarian-puppet install --path=spec/fixtures/modules/ --verbose'
 end
 task :spec_prep => :librarian_spec_prep
 
