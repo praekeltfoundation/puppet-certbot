@@ -10,9 +10,6 @@
 #   The name of the Nginx::Resource::Server resource to use. Defaults to this
 #   resource's name.
 #
-# [*manage_cron*]
-#   Whether or not to set up a cron job to renew the certificate.
-#
 # [*nginx_reload_cmd*]
 #   A command to run to reload Nginx after the cron job command succeeds.
 #
@@ -24,13 +21,16 @@
 # [*location_params*]
 #   A hash of any extra parameters to add to the Nginx location resource created
 #   to serve ACME challenge requests.
+#
+# [*certonly_params*]
+#   A hash of any extra parameters to add to the certonly resource.
 define certbot::nginx::webroot (
-  Array[String] $domains,
-  String        $server           = $name,
-  Boolean       $manage_cron      = true,
-  String        $nginx_reload_cmd = '/usr/sbin/nginx -s reload',
-  Boolean       $location_ssl     = false,
-  Hash          $location_params  = {},
+  Array[String]     $domains,
+  String            $server           = $name,
+  String            $nginx_reload_cmd = '/usr/sbin/nginx -s reload',
+  Optional[Boolean] $location_ssl     = undef,
+  Hash              $location_params  = {},
+  Hash              $certonly_params  = {},
 ) {
   nginx::resource::location { "acme-challenge-${server}":
     server      => $server,
@@ -44,7 +44,7 @@ define certbot::nginx::webroot (
   -> certbot::certonly { "nginx-${server}":
     domains          => $domains,
     plugin           => 'webroot',
-    manage_cron      => $manage_cron,
     cron_success_cmd => $nginx_reload_cmd,
+    *                => $certonly_params,
   }
 }

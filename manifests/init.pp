@@ -48,90 +48,59 @@
 #
 # [*default_config*]
 #   The base config settings.
+#
+# [*certonlys*]
+#   Hash of certbot::certonly resources to create.
+#
+# [*nginx_virtual_servers*]
+#   Hash of certbot::nginx::virtual_server resources to create.
+#
+# [*nginx_webroots*]
+#   Hash of certbot::nginx::webroot resources to create.
 class certbot (
-  String  $email,
+  String $email,
 
-  Optional[String]
-          $version            = undef,
-  Boolean $manage_python      = false,
+  Optional[String] $version       = undef,
+  Boolean          $manage_python = false,
 
-  String  $user               = 'certbot',
-  String  $group              = 'certbot',
-  Boolean $manage_user        = true,
+  String  $user        = 'certbot',
+  String  $group       = 'certbot',
+  Boolean $manage_user = true,
 
   # These paths are still a hangover from when certbot was called 'letsencrypt'
-  String  $install_dir        = '/opt/letsencrypt',
-  String  $working_dir        = '/var/lib/letsencrypt',
-  String  $config_dir         = '/etc/letsencrypt',
-  String  $log_dir            = '/var/log/letsencrypt',
+  Stdlib::Absolutepath $install_dir = '/opt/letsencrypt',
+  Stdlib::Absolutepath $working_dir = '/var/lib/letsencrypt',
+  Stdlib::Absolutepath $config_dir  = '/etc/letsencrypt',
+  Stdlib::Absolutepath $log_dir     = '/var/log/letsencrypt',
 
-  Hash[String, String]
-          $config             = {},
-  Hash[String, String]
-          $default_config     = {
-    'server'              => 'https://acme-v01.api.letsencrypt.org/directory',
+  Hash[String, String] $config         = {},
+  Hash[String, String] $default_config = {
+    'server'              => 'https://acme-v02.api.letsencrypt.org/directory',
     'no-eff-email'        => 'False',
     'expand'              => 'True',
     'keep-until-expiring' => 'True',
   },
-) {
 
-  if $manage_user {
-    if $group != 'root' {
-      group { $group:
-        ensure => present,
-        system => true,
-      }
-    }
-    if $user != 'root' {
-      user { $user:
-        ensure     => present,
-        gid        => $group,
-        system     => true,
-        managehome => true,
-        home       => $working_dir,
-        shell      => '/usr/sbin/nologin',
-      }
-    }
-  }
+  Hash $certonlys             = {},
+  Hash $nginx_virtual_servers = {},
+  Hash $nginx_webroots        = {},
+) {
+  # Path to the certbot configuration file. To be used by other classes via
+  # $certbot::config_file.
+  $config_file = "${config_dir}/cli.ini"
 
   # Path to a directory that can be used for webroot-based challenge responses.
   # To be used by other classes via $certbot::webroot_dir.
   $webroot_dir = "${working_dir}/webroot"
 
-  file { [
-    $working_dir,
-    $webroot_dir,
-    $log_dir,
-    $config_dir,
-  ]:
-    ensure => directory,
-    owner  => $user,
-    group  => $group,
-    mode   => '0755',
-  }
-
-  file { "${config_dir}/cli.ini":
-    ensure => file,
-    owner  => $user,
-    group  => $group,
-    mode   => '0644',
-  }
-
-  contain certbot::install
-
   # Path to the certbot binary in the virtualenv. To be used by other classes
   # via $certbot::certbot_bin.
   $certbot_bin = "${install_dir}/bin/certbot"
 
-  $_config = merge($default_config, $config, { 'email' => $email })
-  $_config.each |$setting, $value| {
-    ini_setting { "${config_dir}/cli.ini ${setting} ${value}":
-      ensure  => present,
-      path    => "${config_dir}/cli.ini",
-      section => '',
-      setting => $setting,
-      value   => $value,
-    }
-  }
+  contain certbot::install
+  contain certbot::config
+
+  create_resources(certbot::certonly, $certonlys)
+  create_resources(certbot::nginx::virtual_server, $nginx_virtual_servers)
+  create_resources(certbot::nginx::webroot, $nginx_webroots)
 }

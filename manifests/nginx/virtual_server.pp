@@ -40,8 +40,8 @@
 #   A hash of any extra parameters to add to the Nginx location resource created
 #   to serve ACME challenge requests.
 #
-# [*standalone_chall*]
-#   The challenge method to use for the standalone plugin.
+# [*certonly_params*]
+#   Extra parameters to pass to the certonly resource.
 #
 # [*enable_certs*]
 #   Whether or not to use the generated certificates for Nginx. This should only
@@ -60,9 +60,6 @@
 #   the *ssl_stapling*, *ssl_stapling_verify*, or *ssl_trusted_cert* parameters
 #   on the virtual server resource.
 #
-# [*manage_cron*]
-#   Whether or not to set up a cron job to renew the certificate.
-#
 # [*nginx_reload_cmd*]
 #   A command to run to reload Nginx after the cron job command succeeds.
 define certbot::nginx::virtual_server (
@@ -72,13 +69,11 @@ define certbot::nginx::virtual_server (
   Enum['standalone', 'webroot']
           $plugin                   = 'webroot',
   Hash    $webroot_location_params  = {},
-  Enum['http', 'tls-sni']
-          $standalone_chall         = 'http',
+  Hash    $certonly_params          = {},
   Optional[Boolean]
           $enable_certs             = undef,
   Boolean $enable_redirect          = true,
   Boolean $enable_stapling          = true,
-  Boolean $manage_cron              = true,
   String  $nginx_reload_cmd         = '/usr/sbin/nginx -s reload',
 ) {
   # Either fetch certificates for the domains passed as a parameter, or try to
@@ -92,31 +87,12 @@ define certbot::nginx::virtual_server (
     }
   }
 
-  if $plugin == 'webroot' {
-    certbot::nginx::webroot { $name:
-      domains          => $_domains,
-      server           => $server,
-      manage_cron      => $manage_cron,
-      nginx_reload_cmd => $nginx_reload_cmd,
-      location_ssl     => $enable_certs,
-      location_params  => $webroot_location_params,
-    }
-  } elsif $plugin == 'standalone' {
-    certbot::certonly { $name:
-      domains          => $_domains,
-      plugin           => 'standalone',
-      standalone_chall => $standalone_chall,
-      manage_cron      => $manage_cron,
-      cron_success_cmd => $nginx_reload_cmd,
-    }
-  }
-
   $_first_domain = $_domains[0]
   $_live_path = "${certbot::config_dir}/live/${_first_domain}"
 
   if $enable_certs == undef {
     if $certbot::config_dir == '/etc/letsencrypt' {
-      $_enable_certs = member($::certbot_live_certs, $_first_domain)
+      $_enable_certs = $_first_domain in $::certbot_live_certs
     } else {
       $_warning = @("END"/L)
 Certificate presence can only be detected with the default config directory,
@@ -128,6 +104,24 @@ adjust the \$enable_certs parameter manually to enable use of the certificates.
     }
   } else {
     $_enable_certs = $enable_certs
+  }
+
+  if $plugin == 'webroot' {
+    certbot::nginx::webroot { $name:
+      domains          => $_domains,
+      server           => $server,
+      nginx_reload_cmd => $nginx_reload_cmd,
+      location_ssl     => $_enable_certs,
+      location_params  => $webroot_location_params,
+      certonly_params  => $certonly_params,
+    }
+  } elsif $plugin == 'standalone' {
+    certbot::certonly { $name:
+      domains          => $_domains,
+      plugin           => 'standalone',
+      cron_success_cmd => $nginx_reload_cmd,
+      *                => $certonly_params,
+    }
   }
 
   if $_enable_certs {
@@ -151,7 +145,7 @@ adjust the \$enable_certs parameter manually to enable use of the certificates.
       false => {},
     }
 
-    $ssl_params = merge($_cert_params, $_redirect_params, $_stapling_params)
+    $ssl_params = $_cert_params + $_redirect_params + $_stapling_params
   } else {
     $ssl_params = {}
   }

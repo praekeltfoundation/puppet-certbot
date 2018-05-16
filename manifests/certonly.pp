@@ -11,14 +11,14 @@
 # [*plugin*]
 #   The Certbot certonly plugin to use. Either 'standalone' or 'webroot'.
 #
-# [*standalone_chall*]
-#   The challenge method to use for the standalone plugin. Either 'http' or
-#   'tls-sni'. Port 80 or 443 needs to be usable for each, respectively
-#   (generally, certbot will need to run as root for that to work).
+# [*preferred_challenges*]
+#   An ordered list of challenge methods to use. Currently only used for the
+#   standalone plugin
 #
 # [*webroot_path*]
 #   The path to the directory to use for the webroot plugin. Currently only a
-#   single webroot directory is supported.
+#   single webroot directory is supported. If unset, defaults to the webroot
+#   path in the config file, which is generally $certbot::webroot_dir.
 #
 # [*manage_cron*]
 #   Whether or not to manage a cron job for renewals.
@@ -26,27 +26,37 @@
 # [*cron_success_cmd*]
 #   Command to run after the cron job succeeds.
 define certbot::certonly (
-  Array[String, 1]
-          $domains,
-  Enum['standalone', 'webroot']
-          $plugin           = 'webroot',
-  Enum['http', 'tls-sni']
-          $standalone_chall = 'http',
-  String  $webroot_path     = $certbot::webroot_dir,
-  Boolean $manage_cron      = true,
-  String  $cron_success_cmd = '/bin/true'
+  Array[String, 1]               $domains,
+  Enum['standalone', 'webroot']  $plugin               = 'webroot',
+  Array[String]                  $preferred_challenges = [],
+  Optional[Stdlib::Absolutepath] $webroot_path         = undef,
+  Boolean                        $manage_cron          = true,
+  String                         $cron_success_cmd     = '/bin/true'
 ) {
-  require certbot
+  include certbot
 
-  $_certonly_cmd = "${certbot::certbot_bin} --noninteractive --agree-tos certonly"
+  $_certonly_args = [
+    $certbot::certbot_bin,
+    '--config', $certbot::config_file,
+    '--noninteractive', '--agree-tos',
+    'certonly'
+  ]
   if $plugin == 'standalone' {
-    $_mode_cmd = "--standalone --preferred-challenges ${standalone_chall}"
+    if !empty($preferred_challenges) {
+      $_plugin_args = ['--standalone', '--preferred-challenges', join($preferred_challenges, ',')]
+    } else {
+      $_plugin_args = ['--standalone']
+    }
   } elsif $plugin == 'webroot' {
-    $_mode_cmd = "--webroot --webroot-path ${webroot_path}"
+    if $webroot_path {
+      $_plugin_args = ['--webroot', '--webroot-path', $webroot_path]
+    } else {
+      $_plugin_args = ['--webroot']
+    }
   }
-  $_domains_cmd = join(prefix($domains, '-d '), ' ')
+  $_domains_args = flatten($domains.map |$domain| { ['-d', $domain] })
 
-  $_command = join([$_certonly_cmd, $_mode_cmd, $_domains_cmd], ' ')
+  $_command = join($_certonly_args + $_plugin_args + $_domains_args, ' ')
 
   $_first_domain = $domains[0]
   $_live_path = "${certbot::config_dir}/live/${_first_domain}"
