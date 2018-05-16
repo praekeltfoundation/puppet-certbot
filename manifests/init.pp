@@ -75,7 +75,7 @@ class certbot (
 
   Hash[String, String] $config         = {},
   Hash[String, String] $default_config = {
-    'server'              => 'https://acme-v01.api.letsencrypt.org/directory',
+    'server'              => 'https://acme-v02.api.letsencrypt.org/directory',
     'no-eff-email'        => 'False',
     'expand'              => 'True',
     'keep-until-expiring' => 'True',
